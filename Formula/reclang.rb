@@ -1,8 +1,8 @@
 class Reclang < Formula
   desc "Recreational Programming Language compiler"
   homepage "https://github.com/reclang/rec"
-  url "https://github.com/reclang/rec/releases/download/v0.0.6/reclang-0.0.6.tar.gz"
-  sha256 "e5b8acea45f72984835b6e5508e7538658d9e256ade58843ad70d612540d2b30"
+  url "https://github.com/reclang/rec/releases/download/v0.0.7/reclang-0.0.7.tar.gz"
+  sha256 "2212d586fc57cf7e24d9ef103252c028bad96a7e78ba0434ed18f78fb21ad306"
   license "Apache-2.0" => { with: "LLVM-exception" }
 
   depends_on "ldc" => :build
