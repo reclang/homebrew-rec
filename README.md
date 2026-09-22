@@ -1,18 +1,26 @@
-# Reclang Rec
+# Homebrew tap for the Recreational Programming Language
 
-## How do I install these formulae?
-
-`brew install reclang/rec/<formula>`
-
-Or `brew tap reclang/rec` and then `brew install <formula>`.
-
-Or, in a `brew bundle` `Brewfile`:
-
-```ruby
-tap "reclang/rec"
-brew "<formula>"
+```sh
+brew install reclang/rec/reclang
 ```
 
-## Documentation
+That one command taps `reclang/rec` and trusts this formula, nothing else in
+the tap. Or trust the whole tap and use the short name:
 
-`brew help`, `man brew` or check [Homebrew's documentation](https://docs.brew.sh).
+```sh
+brew tap reclang/rec
+brew trust reclang/rec
+brew install reclang
+```
+
+Either way, `brew upgrade reclang` follows releases.
+
+The formula builds `reclang` from the release source tarball with ldc, which
+Homebrew installs for the build together with LLVM. Works on macOS and Linux.
+
+`brew install reclang` alone is refused: Homebrew loads a formula from a
+non-official tap only under its full name, or after `brew trust`.
+
+The compiler, its issues and its releases live at
+<https://github.com/reclang/rec>. The release workflow there updates the
+formula in this tap.
