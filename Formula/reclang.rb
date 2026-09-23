@@ -10,6 +10,13 @@ class Reclang < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://ghcr.io/v2/reclang/rec"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "c0226631575c062353057d06226a183c6e4b202febab8afd9a8c59277c2a9458"
+    sha256 cellar: :any,                 x86_64_linux: "626b741003391fe54d2520b52151ba83cd419d96b507450f335f1541505dd50e"
+  end
+
   depends_on "ldc" => :build
 
   def install
