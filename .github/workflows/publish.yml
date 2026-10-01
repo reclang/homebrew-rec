@@ -1,6 +1,8 @@
-# brew tap-new --github-packages template (Homebrew 7.0.6). Run by hand with
-# the pull request number: brew pr-pull uploads that pull request's bottles to
-# GitHub Packages, adds the bottle block and pushes the result to main.
+# brew tap-new --github-packages template (Homebrew 7.0.6): brew pr-pull
+# uploads a pull request's bottles to GitHub Packages, adds the bottle block
+# and pushes the result to main. It runs by itself once brew test-bot passes
+# on a release pull request, a reclang-X.Y.Z branch of this repository, and
+# by hand with the pull request number.
 name: brew pr-pull
 
 on:
@@ -11,15 +13,63 @@ on:
         required: true
       head_sha:
         description: Expected pull request head commit SHA (optional)
+  workflow_run:
+    workflows: [brew test-bot]
+    types: [completed]
 
 permissions: {}
+
+# runs for the same pull request wait for each other; other test-bot runs
+# get a group of their own
+concurrency:
+  group: pr-pull-${{ inputs.pull_request || github.event.workflow_run.pull_requests[0].number || github.run_id }}
 
 defaults:
   run:
     shell: bash -xeuo pipefail {0}
 
 jobs:
+  # the pull request to publish: the dispatch inputs, or the release pull
+  # request test-bot has just passed; branches from forks never publish
+  pull-request:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       startsWith(github.event.workflow_run.head_branch, 'reclang-'))
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      number: ${{ steps.find.outputs.number }}
+      head_sha: ${{ steps.find.outputs.head_sha }}
+    steps:
+      - name: Find the pull request
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST: ${{ inputs.pull_request || github.event.workflow_run.pull_requests[0].number }}
+          HEAD_SHA: ${{ inputs.head_sha || github.event.workflow_run.head_sha }}
+        run: |
+          if [[ -z "$PULL_REQUEST" ]]
+          then
+            echo "::error::no pull request for this run"
+            exit 1
+          fi
+          # a re-run or a duplicate event finds the pull request published
+          state=$(gh pr view "$PULL_REQUEST" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
+          if [[ "$state" != OPEN ]]
+          then
+            echo "::notice::pull request #$PULL_REQUEST is $state, nothing to publish"
+            exit 0
+          fi
+          echo "number=$PULL_REQUEST" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
   pr-pull:
+    needs: pull-request
+    if: needs.pull-request.outputs.number != ''
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -48,8 +98,8 @@ jobs:
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           HOMEBREW_GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_GITHUB_PACKAGES_USER: ${{ github.repository_owner }}
-          HEAD_SHA: ${{ inputs.head_sha }}
-          PULL_REQUEST: ${{ inputs.pull_request }}
+          HEAD_SHA: ${{ needs.pull-request.outputs.head_sha }}
+          PULL_REQUEST: ${{ needs.pull-request.outputs.number }}
         run: |
           if [[ -n "$HEAD_SHA" ]]
           then
